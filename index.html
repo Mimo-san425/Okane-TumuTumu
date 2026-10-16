@@ -1,1 +1,695 @@
-<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>コインつなぎ 60秒</title><style>*{box-sizing:border-box}body{margin:0;background:#10213c;color:white;font-family:system-ui,sans-serif;touch-action:manipulation}.app{max-width:680px;margin:auto;padding:12px}.stats{display:flex;justify-content:space-around;background:#254569;border-radius:14px;padding:10px;text-align:center}.num{font-size:30px;font-weight:900}.board{position:relative;width:100%;aspect-ratio:8/9;background:radial-gradient(#345b88,#122947);border:3px solid #779ac0;border-radius:15px;touch-action:none;overflow:hidden;margin-top:10px}.coin{position:absolute;width:11.5%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);display:grid;place-items:center;font-size:clamp(13px,4vw,25px);font-weight:900;pointer-events:none;box-shadow:inset 2px 2px 4px #fff9,inset -3px -3px 4px #0005,0 2px 5px #0006}.coin.v1,.coin.v100{background:linear-gradient(140deg,#fff,#a7b3c0);color:#35465b;border:2px solid #eef3fa}.coin.v10{background:linear-gradient(140deg,#f5c486,#aa632f);color:#633615;border:2px solid #fbd09c}.coin.hint{box-shadow:0 0 0 4px #a7ff85,0 0 22px 7px #8eff69,inset 2px 2px 4px #fff9;animation:pulse .7s infinite alternate}.coin.sel{z-index:2;box-shadow:0 0 0 4px #ffdf45,0 0 19px #ffdf45;transform:translate(-50%,-50%) scale(1.12)}@keyframes pulse{to{filter:brightness(1.45)}}button{background:#ffd54c;border:0;border-radius:12px;padding:13px 24px;font-weight:900;font-size:21px;color:#3a2c0c}.overlay{position:absolute;inset:0;background:#071629e9;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center}.overlay h1{font-size:36px;margin:0}.overlay .big{font-size:50px;font-weight:900;color:#ffdf55}.hidden{display:none}.msg{text-align:center;min-height:28px;font-weight:bold;margin-top:10px}.guide{text-align:center;font-size:13px;color:#dce9ff;margin:10px 0}.spark{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);font-size:36px;color:#ffe65b;font-weight:900;text-shadow:0 0 18px #ffb800;pointer-events:none;z-index:4;animation:pop .7s forwards;white-space:nowrap}@keyframes pop{0%{opacity:0;scale:.5}35%{opacity:1;scale:1.1}100%{opacity:0;scale:1.3}} .coin{background-size:cover!important;background-position:center!important;font-size:0!important;border:0!important}.coin.v1{background-image:url("assets/1.png")!important}.coin.v10{background-image:url("assets/10.png")!important}.coin.v100{background-image:url("assets/100.png")!important}.lesson{position:absolute;z-index:4;top:27%;left:4%;width:92%;padding:14px 8px;background:#fffdf1f5;color:#182b46;border:4px solid #ffd34e;border-radius:20px;text-align:center;pointer-events:none;box-shadow:0 8px 30px #0008;animation:lessonpop .95s forwards}.lesson .mini{display:flex;justify-content:center;gap:4px;margin:7px 0}.lesson .mini img{width:15%;max-width:57px}.lesson .math{font-size:clamp(17px,4.5vw,28px);font-weight:900}.lesson .converted{display:flex;justify-content:center;align-items:center;gap:14px;font-size:24px;font-weight:900}.lesson .converted img{width:23%;max-width:90px}@keyframes lessonpop{0%{opacity:0;transform:scale(.75)}15%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0;transform:scale(1.08)}} </style><div class="app"><div class="stats"><div>のこり時間<div class="num"><span id="time">60</span>秒</div></div><div>あつめた おかね<div class="num"><span id="score">0</span>円</div></div></div><div id="board" class="board"><svg id="lines" viewBox="0 0 100 112.5" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1"></svg><div id="coins"></div><div id="overlay" class="overlay"><h1 id="heading">コインつなぎ</h1><div id="result">60秒で なん円 あつめられるかな？</div><div id="final" class="big hidden"></div><button id="start">スタート！</button></div></div><div id="msg" class="msg">おなじコインを 5まい ぴったり つなげよう！</div><div class="guide">1円×5→5円　10円×5→50円　100円×5→500円</div></div><script>(()=>{const board=document.getElementById('board'),coins=document.getElementById('coins'),lines=document.getElementById('lines'),overlay=document.getElementById('overlay'),start=document.getElementById('start'),timeEl=document.getElementById('time'),scoreEl=document.getElementById('score'),msg=document.getElementById('msg');const C=8,R=9;let cells=[],sel=[],active=false,playing=false,busy=false,score=0,endAt=0,tick=null,epoch=0;const idx=(r,c)=>r*C+c,rc=i=>[Math.floor(i/C),i%C],rnd=()=>[1,10,100][Math.floor(Math.random()*3)];function neighbors(i){let [r,c]=rc(i),out=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;let y=r+dr,x=c+dc;if(y>=0&&y<R&&x>=0&&x<C)out.push(idx(y,x))}return out}function hints(){if(!active||!sel.length||sel.length>=5)return [];let last=sel.at(-1);return neighbors(last).filter(i=>cells[i]===cells[last]&&!sel.includes(i))}function draw(){let hs=new Set(hints());coins.innerHTML='';cells.forEach((v,i)=>{if(v==null)return;let [r,c]=rc(i),el=document.createElement('div');el.className='coin v'+v+(sel.includes(i)?' sel':'')+(hs.has(i)?' hint':'');el.style.left=((c+.5)/C*100)+'%';el.style.top=((r+.5)/R*100)+'%';el.textContent=v;coins.appendChild(el)});let pts=sel.map(i=>{let [r,c]=rc(i);return `${(c+.5)/C*100},${(r+.5)/R*112.5}`}).join(' ');lines.innerHTML=pts?`<polyline points="${pts}" fill="none" stroke="#ffe35c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`:''}function locate(e){let b=board.getBoundingClientRect(),x=(e.clientX-b.left)/b.width,y=(e.clientY-b.top)/b.height;if(x<0||x>=1||y<0||y>=1)return -1;return idx(Math.floor(y*R),Math.floor(x*C))}function add(i){if(i<0||cells[i]==null)return;if(!sel.length){sel=[i];draw();return}let last=sel.at(-1);if(i===last)return;if(sel.length>1&&i===sel.at(-2)){sel.pop();draw();return}if(sel.includes(i)||cells[i]!==cells[last]||!neighbors(last).includes(i))return;sel.push(i);draw()}function finish(){if(!active)return;active=false;if(!playing){sel=[];draw();return}if(sel.length!==5){msg.textContent=sel.length>5?'6まいは つなげません':'5まい ぴったり つなげよう！';sel=[];draw();return}busy=true;let base=cells[sel[0]],earned=base*5;score+=earned;scoreEl.textContent=score.toLocaleString('ja-JP');msg.textContent=base+'円が 5まいで '+earned+'円！';let fx=document.createElement('div');fx.className='lesson';fx.innerHTML='<strong>'+base+'円玉 5まい</strong><div class="mini">'+Array(5).fill('<img src="assets/coin'+base+'.svg" alt="'+base+'円玉">').join('')+'</div><div class="math">'+Array(5).fill(base).join(' ＋ ')+' ＝ '+earned+'円</div><div class="converted"><span>↓</span><img src="assets/coin'+earned+'.svg" alt="'+earned+'円玉"><span>'+earned+'円玉 1まい！</span></div>';board.appendChild(fx);sel.forEach(i=>cells[i]=null);sel=[];draw();let myEpoch=epoch;setTimeout(()=>{if(myEpoch!==epoch)return;for(let c=0;c<C;c++){let stack=[];for(let r=R-1;r>=0;r--)if(cells[idx(r,c)]!==null)stack.push(cells[idx(r,c)]);for(let r=R-1;r>=0;r--)cells[idx(r,c)]=stack[R-1-r]??rnd()}fx.remove();busy=false;draw();if(!playing)showEnd()},950)}function showEnd(){overlay.classList.remove('hidden');document.getElementById('heading').textContent='タイムアップ！';document.getElementById('result').textContent='あつめた おかね';let final=document.getElementById('final');final.textContent=score.toLocaleString('ja-JP')+'円';final.classList.remove('hidden');start.textContent='もういちど！'}function updateTime(){if(!playing)return;let remaining=Math.max(0,Math.ceil((endAt-performance.now())/1000));timeEl.textContent=remaining;if(performance.now()>=endAt){playing=false;clearInterval(tick);timeEl.textContent='0';if(!busy)showEnd()}}function newGame(){epoch++;clearInterval(tick);document.querySelectorAll('.spark').forEach(x=>x.remove());score=0;scoreEl.textContent='0';timeEl.textContent='60';cells=Array.from({length:C*R},rnd);sel=[];active=false;busy=false;playing=true;endAt=performance.now()+60000;overlay.classList.add('hidden');msg.textContent='おなじコインを 5まい ぴったり つなげよう！';draw();tick=setInterval(updateTime,80)}board.addEventListener('pointerdown',e=>{if(!playing||busy)return;e.preventDefault();board.setPointerCapture(e.pointerId);active=true;sel=[];add(locate(e))});board.addEventListener('pointermove',e=>{if(!active)return;e.preventDefault();add(locate(e))});board.addEventListener('pointerup',finish);board.addEventListener('pointercancel',finish);start.addEventListener('click',newGame);cells=Array.from({length:C*R},rnd);draw()})();</script></html>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>コインつなぎ 60秒</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#10213c;
+  color:white;
+  font-family:system-ui,sans-serif;
+  touch-action:manipulation;
+}
+
+.app{
+  max-width:680px;
+  margin:auto;
+  padding:12px;
+}
+
+.stats{
+  display:flex;
+  justify-content:space-around;
+  background:#254569;
+  border-radius:14px;
+  padding:10px;
+  text-align:center;
+}
+
+.num{
+  font-size:30px;
+  font-weight:900;
+}
+
+.board{
+  position:relative;
+  width:100%;
+  aspect-ratio:8/9;
+  background:radial-gradient(#345b88,#122947);
+  border:3px solid #779ac0;
+  border-radius:15px;
+  touch-action:none;
+  overflow:hidden;
+  margin-top:10px;
+}
+
+.coin{
+  position:absolute;
+  width:11.5%;
+  aspect-ratio:1;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  display:grid;
+  place-items:center;
+  font-size:clamp(13px,4vw,25px);
+  font-weight:900;
+  pointer-events:none;
+  box-shadow:
+    inset 2px 2px 4px #fff9,
+    inset -3px -3px 4px #0005,
+    0 2px 5px #0006;
+}
+
+.coin.hint{
+  box-shadow:
+    0 0 0 4px #a7ff85,
+    0 0 22px 7px #8eff69,
+    inset 2px 2px 4px #fff9;
+  animation:pulse .7s infinite alternate;
+}
+
+.coin.sel{
+  z-index:2;
+  box-shadow:
+    0 0 0 4px #ffdf45,
+    0 0 19px #ffdf45;
+  transform:translate(-50%,-50%) scale(1.12);
+}
+
+@keyframes pulse{
+  to{filter:brightness(1.45)}
+}
+
+button{
+  background:#ffd54c;
+  border:0;
+  border-radius:12px;
+  padding:13px 24px;
+  font-weight:900;
+  font-size:21px;
+  color:#3a2c0c;
+}
+
+.overlay{
+  position:absolute;
+  inset:0;
+  background:#071629e9;
+  z-index:5;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  text-align:center;
+}
+
+.overlay h1{
+  font-size:36px;
+  margin:0;
+}
+
+.overlay .big{
+  font-size:50px;
+  font-weight:900;
+  color:#ffdf55;
+}
+
+.hidden{
+  display:none;
+}
+
+.msg{
+  text-align:center;
+  min-height:28px;
+  font-weight:bold;
+  margin-top:10px;
+}
+
+.guide{
+  text-align:center;
+  font-size:13px;
+  color:#dce9ff;
+  margin:10px 0;
+}
+
+.spark{
+  position:absolute;
+  top:42%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:36px;
+  color:#ffe65b;
+  font-weight:900;
+  text-shadow:0 0 18px #ffb800;
+  pointer-events:none;
+  z-index:4;
+  animation:pop .7s forwards;
+  white-space:nowrap;
+}
+
+@keyframes pop{
+  0%{opacity:0;scale:.5}
+  35%{opacity:1;scale:1.1}
+  100%{opacity:0;scale:1.3}
+}
+
+.coin{
+  background-size:cover !important;
+  background-position:center !important;
+  font-size:0 !important;
+  border:0 !important;
+}
+
+.coin.v1{
+  background-image:url("assets/1.png") !important;
+}
+
+.coin.v10{
+  background-image:url("assets/10.png") !important;
+}
+
+.coin.v100{
+  background-image:url("assets/100.png") !important;
+}
+
+.lesson{
+  position:absolute;
+  z-index:4;
+  top:27%;
+  left:4%;
+  width:92%;
+  padding:14px 8px;
+  background:#fffdf1f5;
+  color:#182b46;
+  border:4px solid #ffd34e;
+  border-radius:20px;
+  text-align:center;
+  pointer-events:none;
+  box-shadow:0 8px 30px #0008;
+  animation:lessonpop .95s forwards;
+}
+
+.lesson .mini{
+  display:flex;
+  justify-content:center;
+  gap:4px;
+  margin:7px 0;
+}
+
+.lesson .mini img{
+  width:15%;
+  max-width:57px;
+}
+
+.lesson .math{
+  font-size:clamp(17px,4.5vw,28px);
+  font-weight:900;
+}
+
+.lesson .converted{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:14px;
+  font-size:24px;
+  font-weight:900;
+}
+
+.lesson .converted img{
+  width:23%;
+  max-width:90px;
+}
+
+@keyframes lessonpop{
+  0%{
+    opacity:0;
+    transform:scale(.75);
+  }
+  15%{
+    opacity:1;
+    transform:scale(1);
+  }
+  78%{
+    opacity:1;
+  }
+  100%{
+    opacity:0;
+    transform:scale(1.08);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<div class="stats">
+  <div>
+    のこり時間
+    <div class="num">
+      <span id="time">60</span>秒
+    </div>
+  </div>
+
+  <div>
+    あつめた おかね
+    <div class="num">
+      <span id="score">0</span>円
+    </div>
+  </div>
+</div>
+
+<div id="board" class="board">
+
+<svg id="lines"
+     viewBox="0 0 100 112.5"
+     preserveAspectRatio="none"
+     style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1">
+</svg>
+
+<div id="coins"></div>
+
+<div id="overlay" class="overlay">
+  <h1 id="heading">コインつなぎ</h1>
+
+  <div id="result">
+    60秒で なん円 あつめられるかな？
+  </div>
+
+  <div id="final" class="big hidden"></div>
+
+  <button id="start">
+    スタート！
+  </button>
+</div>
+
+</div>
+
+<div id="msg" class="msg">
+おなじコインを 5まい ぴったり つなげよう！
+</div>
+
+<div class="guide">
+1円×5→5円　10円×5→50円　100円×5→500円
+</div>
+</div>
+
+<script>
+(() => {
+
+const board=document.getElementById('board');
+const coins=document.getElementById('coins');
+const lines=document.getElementById('lines');
+const overlay=document.getElementById('overlay');
+const start=document.getElementById('start');
+const timeEl=document.getElementById('time');
+const scoreEl=document.getElementById('score');
+const msg=document.getElementById('msg');
+
+const C=8;
+const R=9;
+
+let cells=[];
+let sel=[];
+let active=false;
+let playing=false;
+let busy=false;
+let score=0;
+let endAt=0;
+let tick=null;
+let epoch=0;
+
+const idx=(r,c)=>r*C+c;
+const rc=i=>[Math.floor(i/C),i%C];
+const rnd=()=>[1,10,100][Math.floor(Math.random()*3)];
+
+function neighbors(i){
+  let [r,c]=rc(i);
+  let out=[];
+
+  for(let dr=-1;dr<=1;dr++){
+    for(let dc=-1;dc<=1;dc++){
+
+      if(!dr&&!dc)continue;
+
+      let y=r+dr;
+      let x=c+dc;
+
+      if(y>=0&&y<R&&x>=0&&x<C){
+        out.push(idx(y,x));
+      }
+    }
+  }
+  return out;
+}
+
+function hints(){
+
+  if(!active||!sel.length||sel.length>=5){
+    return [];
+  }
+
+  let last=sel.at(-1);
+
+  return neighbors(last).filter(i =>
+    cells[i]===cells[last] &&
+    !sel.includes(i)
+  );
+}
+
+function draw(){
+
+  let hs=new Set(hints());
+
+  coins.innerHTML='';
+
+  cells.forEach((v,i)=>{
+
+    if(v==null)return;
+
+    let [r,c]=rc(i);
+
+    let el=document.createElement('div');
+
+    el.className =
+      'coin v'+v+
+      (sel.includes(i)?' sel':'')+
+      (hs.has(i)?' hint':'');
+
+    el.style.left=((c+.5)/C*100)+'%';
+    el.style.top=((r+.5)/R*100)+'%';
+
+    coins.appendChild(el);
+  });
+
+  let pts=sel.map(i=>{
+    let [r,c]=rc(i);
+    return `${(c+.5)/C*100},${(r+.5)/R*112.5}`;
+  }).join(' ');
+
+  lines.innerHTML=
+    pts
+    ? `<polyline points="${pts}" fill="none" stroke="#ffe35c"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"/>`
+    : '';
+}
+
+function locate(e){
+
+  let b=board.getBoundingClientRect();
+
+  let x=(e.clientX-b.left)/b.width;
+  let y=(e.clientY-b.top)/b.height;
+
+  if(x<0||x>=1||y<0||y>=1){
+    return -1;
+  }
+
+  return idx(
+    Math.floor(y*R),
+    Math.floor(x*C)
+  );
+}
+
+function add(i){
+
+  if(i<0||cells[i]==null)return;
+
+  if(!sel.length){
+    sel=[i];
+    draw();
+    return;
+  }
+
+  let last=sel.at(-1);
+
+  if(i===last)return;
+
+  if(sel.length>1&&i===sel.at(-2)){
+    sel.pop();
+    draw();
+    return;
+  }
+
+  if(
+    sel.includes(i)||
+    cells[i]!==cells[last]||
+    !neighbors(last).includes(i)
+  ){
+    return;
+  }
+
+  sel.push(i);
+  draw();
+}
+
+function finish(){
+
+  if(!active)return;
+
+  active=false;
+
+  if(!playing){
+    sel=[];
+    draw();
+    return;
+  }
+
+  if(sel.length!==5){
+
+    msg.textContent=
+      sel.length>5
+      ? '6まいは つなげません'
+      : '5まい ぴったり つなげよう！';
+
+    sel=[];
+    draw();
+    return;
+  }
+
+  busy=true;
+
+  let base=cells[sel[0]];
+  let earned=base*5;
+
+  score+=earned;
+  scoreEl.textContent=score.toLocaleString('ja-JP');
+
+  msg.textContent=
+    base+'円が 5まいで '+earned+'円！';
+
+  let fx=document.createElement('div');
+  fx.className='lesson';
+
+  fx.innerHTML=
+    '<strong>'+base+'円玉 5まい</strong>'+
+
+    '<div class="mini">'+
+      '<img src="assets/'+base+'.png">'.repeat(5)+
+    '</div>'+
+
+    '<div class="math">'+
+      Array(5).fill(base).join(' ＋ ') +
+      ' ＝ ' +
+      earned +
+      '円' +
+    '</div>'+
+
+    '<div class="converted">'+
+      '<span>↓</span>'+
+      '<img src="assets/'+earned+'.png">'+
+      '<span>'+earned+'円玉 1まい！</span>'+
+    '</div>';
+
+  board.appendChild(fx);
+
+  sel.forEach(i=>cells[i]=null);
+
+  sel=[];
+
+  draw();
+
+  let myEpoch=epoch;
+
+  setTimeout(()=>{
+
+    if(myEpoch!==epoch)return;
+
+    for(let c=0;c<C;c++){
+
+      let stack=[];
+
+      for(let r=R-1;r>=0;r--){
+
+        if(cells[idx(r,c)]!==null){
+          stack.push(cells[idx(r,c)]);
+        }
+      }
+
+      for(let r=R-1;r>=0;r--){
+
+        cells[idx(r,c)] =
+          stack[R-1-r] ?? rnd();
+      }
+    }
+
+    fx.remove();
+
+    busy=false;
+
+    draw();
+
+    if(!playing){
+      showEnd();
+    }
+
+  },950);
+}
+
+function showEnd(){
+
+  overlay.classList.remove('hidden');
+
+  document.getElementById('heading').textContent =
+    'タイムアップ！';
+
+  document.getElementById('result').textContent =
+    'あつめた おかね';
+
+  let final=document.getElementById('final');
+
+  final.textContent=
+    score.toLocaleString('ja-JP')+'円';
+
+  final.classList.remove('hidden');
+
+  start.textContent='もういちど！';
+}
+
+function updateTime(){
+
+  if(!playing)return;
+
+  let remaining=Math.max(
+    0,
+    Math.ceil((endAt-performance.now())/1000)
+  );
+
+  timeEl.textContent=remaining;
+
+  if(performance.now()>=endAt){
+
+    playing=false;
+
+    clearInterval(tick);
+
+    timeEl.textContent='0';
+
+    if(!busy){
+      showEnd();
+    }
+  }
+}
+
+function newGame(){
+
+  epoch++;
+
+  clearInterval(tick);
+
+  score=0;
+  scoreEl.textContent='0';
+
+  timeEl.textContent='60';
+
+  cells=Array.from(
+    {length:C*R},
+    rnd
+  );
+
+  sel=[];
+
+  active=false;
+  busy=false;
+
+  playing=true;
+
+  endAt=
+    performance.now()+60000;
+
+  overlay.classList.add('hidden');
+
+  msg.textContent=
+    'おなじコインを 5まい ぴったり つなげよう！';
+
+  draw();
+
+  tick=setInterval(
+    updateTime,
+    80
+  );
+}
+
+board.addEventListener('pointerdown',e=>{
+
+  if(!playing||busy)return;
+
+  e.preventDefault();
+
+  board.setPointerCapture(e.pointerId);
+
+  active=true;
+
+  sel=[];
+
+  add(
+    locate(e)
+  );
+});
+
+board.addEventListener('pointermove',e=>{
+
+  if(!active)return;
+
+  e.preventDefault();
+
+  add(
+    locate(e)
+  );
+});
+
+board.addEventListener(
+  'pointerup',
+  finish
+);
+
+board.addEventListener(
+  'pointercancel',
+  finish
+);
+
+start.addEventListener(
+  'click',
+  newGame
+);
+
+cells=Array.from(
+  {length:C*R},
+  rnd
+);
+
+draw();
+
+})();
+</script>
+
+</body>
+</html>
