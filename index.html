@@ -489,25 +489,21 @@ function finish(){
   let fx=document.createElement('div');
   fx.className='lesson';
 
-  fx.innerHTML=
-    '<strong>'+base+'円玉 5まい</strong>'+
+ fx.innerHTML=
+  '<strong>'+base+'円玉 5まい</strong>'+
 
-    '<div class="mini">'+
-      '<img src="assets/'+base+'.png">'.repeat(5)+
-    '</div>'+
+  '<div class="mini">'+
+    Array(5).fill('<img src="assets/'+base+'.png">') '</div>'+
 
-    '<div class="math">'+
-      Array(5).fill(base).join(' ＋ ') +
-      ' ＝ ' +
-      earned +
-      '円' +
-    '</div>'+
+  '<div class="math">'+
+    Array(5).fill(base).join(' ＋ ') +
+    ' ＝ ' + earned + '円' +
+  '</div>'+
 
-    '<div class="converted">'+
-      '<span>↓</span>'+
-      '<img src="assets/'+earned+'.png">'+
-      '<span>'+earned+'円玉 1まい！</span>'+
-    '</div>';
+  '<div class="converted">'+
+    '<span>↓</span>'+
+    '<img src="assets/'+earned+'.pngpan>'+earned+'円玉 1まい！</span>'+
+  '</div>';
 
   board.appendChild(fx);
 
